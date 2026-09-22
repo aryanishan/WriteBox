@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WriteBox
 
-## Getting Started
+WriteBox is an offline-first rich-text notes app. Notes live in IndexedDB in the browser, so creating, editing, searching, favouriting, duplicating, exporting, and deleting notes all work without an account or network connection. Google Drive sync is optional.
 
-First, run the development server:
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`. The root route redirects to `/notes`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Tiptap editor with headings, lists, links, quotes, code blocks, and undo/redo
+- Debounced local autosave and reactive IndexedDB note list
+- Notes search, favorites, recent filter, duplicate, soft-delete, and storage controls
+- Markdown, plain-text, and JSON exports
+- Light, dark, and system themes plus local editor font-size and width preferences
+- Responsive mobile sidebar and keyboard shortcuts: `Ctrl/Cmd + N`, `S`, `K`, and `Shift + S`
+- Optional Google Drive sync to a dedicated `WriteBox` folder, including conflict resolution
 
-## Learn More
+## Google Drive setup (optional)
 
-To learn more about Next.js, take a look at the following resources:
+The app is fully usable without this configuration. To enable sync, copy `.env.example` to `.env.local`, create a Google OAuth **Web application** client, enable the Google Drive API, and set the values below:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REDIRECT_URI=http://localhost:3000
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=...
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Add `http://localhost:3000` to both the OAuth client’s **Authorized JavaScript origins** and **Authorized redirect URIs**. The app uses Google’s popup code flow, for which the redirect URI is the page origin. Refresh tokens are retained only in an httpOnly cookie; browser storage holds the short-lived access token and basic connection metadata.
 
-## Deploy on Vercel
+## Validate
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run lint
+npm run build
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For a manual smoke test: create and edit a note, refresh the page to confirm persistence, search it with `Ctrl/Cmd + K`, export it, switch themes, and verify the mobile drawer at a narrow viewport. With Drive credentials configured, connect in Settings, sync a note, edit it, then use **Update Drive**.
