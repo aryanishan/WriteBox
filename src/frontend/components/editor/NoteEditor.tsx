@@ -12,6 +12,7 @@ import Color from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
 import FontFamily from '@tiptap/extension-font-family';
+import { DrawingBlock } from './extensions/DrawingBlock';
 import { common, createLowlight } from 'lowlight';
 import { EditorToolbar } from './EditorToolbar';
 import { EditorFooter } from './EditorFooter';
@@ -60,6 +61,7 @@ export function NoteEditor() {
         multicolor: true,
       }),
       FontFamily,
+      DrawingBlock,
     ],
     immediatelyRender: false,
     editorProps: {
