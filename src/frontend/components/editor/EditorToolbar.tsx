@@ -271,7 +271,7 @@ export function EditorToolbar({
 
           // Temporarily remove placeholder text styling if empty
           const opt = {
-            margin: [15, 15, 15, 15],
+            margin: 15,
             filename: `${titleSlug}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true, logging: false },
