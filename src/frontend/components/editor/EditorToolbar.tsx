@@ -44,6 +44,7 @@ import {
   PaintBucket,
   ChevronDown,
   PenTool,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -137,6 +138,7 @@ export function EditorToolbar({
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [showMenu, setShowMenu] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Dropdown states
   const [showFontDropdown, setShowFontDropdown] = useState(false);
@@ -249,6 +251,25 @@ export function EditorToolbar({
           ? 'Line formatting cleared'
           : 'Selection formatting cleared'
       );
+    },
+    [editor]
+  );
+
+  const handleImageUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            editor.chain().focus().setImage({ src: event.target.result as string }).run();
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     },
     [editor]
   );
@@ -689,8 +710,9 @@ export function EditorToolbar({
 
           <div className="w-px h-5 bg-[var(--color-border)] mx-1" />
 
-          {/* Draw, Code, link, hr */}
+          {/* Draw, Image, Code, link, hr */}
           {toolbarBtn(false, () => editor.chain().focus().insertContent({ type: 'drawingBlock', attrs: { lines: [] } }).run(), <PenTool size={16} />, 'Insert Drawing')}
+          {toolbarBtn(editor.isActive('image'), () => fileInputRef.current?.click(), <ImageIcon size={16} />, 'Insert Image')}
           {toolbarBtn(editor.isActive('code'), () => editor.chain().focus().toggleCode().run(), <Code size={16} />, 'Inline Code')}
           {toolbarBtn(editor.isActive('codeBlock'), () => editor.chain().focus().toggleCodeBlock().run(), <span className="text-xs font-mono">{'</>'}</span>, 'Code Block')}
           {toolbarBtn(
@@ -736,6 +758,15 @@ export function EditorToolbar({
           <Button variant="primary" onClick={handleSetLink}>{linkUrl ? 'Set Link' : 'Remove Link'}</Button>
         </div>
       </Modal>
+
+      {/* Hidden File Input for Image Upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImageUpload}
+        accept="image/*"
+        className="hidden"
+      />
     </>
   );
 }

@@ -35,6 +35,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "sonner": "^2.0.8",
+    "tiptap-extension-resize-image": "^1.4.7",
     "uuid": "^14.0.2"
   },
   "devDependencies": {

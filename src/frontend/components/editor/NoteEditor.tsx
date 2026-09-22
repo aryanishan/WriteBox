@@ -12,6 +12,7 @@ import Color from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
 import FontFamily from '@tiptap/extension-font-family';
+import ImageResize from 'tiptap-extension-resize-image';
 import { DrawingBlock } from './extensions/DrawingBlock';
 import { common, createLowlight } from 'lowlight';
 import { EditorToolbar } from './EditorToolbar';
@@ -61,12 +62,54 @@ export function NoteEditor() {
         multicolor: true,
       }),
       FontFamily,
+      ImageResize,
       DrawingBlock,
     ],
     immediatelyRender: false,
     editorProps: {
       attributes: {
         class: 'tiptap-editor focus:outline-none',
+      },
+      handlePaste: (view, event) => {
+        const items = Array.from(event.clipboardData?.items || []);
+        for (const item of items) {
+          if (item.type.indexOf('image') === 0) {
+            const file = item.getAsFile();
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (readerEvent) => {
+                const node = view.state.schema.nodes.image.create({
+                  src: readerEvent.target?.result,
+                });
+                const transaction = view.state.tr.replaceSelectionWith(node);
+                view.dispatch(transaction);
+              };
+              reader.readAsDataURL(file);
+              event.preventDefault();
+              return true;
+            }
+          }
+        }
+        return false;
+      },
+      handleDrop: (view, event, slice, moved) => {
+        if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+          const file = event.dataTransfer.files[0];
+          if (file.type.indexOf('image') === 0) {
+            const reader = new FileReader();
+            reader.onload = (readerEvent) => {
+              const { schema } = view.state;
+              const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+              const node = schema.nodes.image.create({ src: readerEvent.target?.result });
+              const transaction = view.state.tr.insert(coordinates?.pos || 0, node);
+              view.dispatch(transaction);
+            };
+            reader.readAsDataURL(file);
+            event.preventDefault();
+            return true;
+          }
+        }
+        return false;
       },
     },
     onUpdate: ({ editor }) => {
