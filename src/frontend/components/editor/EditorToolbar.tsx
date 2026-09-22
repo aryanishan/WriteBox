@@ -270,7 +270,7 @@ export function EditorToolbar({
           }
 
           // Temporarily remove placeholder text styling if empty
-          const opt = {
+          const opt: any = {
             margin: 15,
             filename: `${titleSlug}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
