@@ -36,4 +36,5 @@ export const LS_KEYS = {
   THEME: 'writebox-theme',
   SETTINGS: 'writebox-settings',
   GOOGLE_DRIVE: 'writebox-gdrive',
+  AUTH_USER: 'writebox-auth-user',
 } as const;
