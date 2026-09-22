@@ -43,6 +43,7 @@ import {
   Palette,
   PaintBucket,
   ChevronDown,
+  PenTool,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -423,7 +424,7 @@ export function EditorToolbar({
         </div>
 
         {/* ─── Formatting Toolbar ──────────────────────────────── */}
-        <div className="flex items-center gap-0.5 px-4 pb-2 overflow-x-auto flex-wrap">
+        <div className="flex items-center gap-0.5 px-4 pb-2 flex-wrap">
           {/* Headings */}
           {toolbarBtn(editor.isActive('heading', { level: 1 }), () => editor.chain().focus().toggleHeading({ level: 1 }).run(), <Heading1 size={16} />, 'Heading 1')}
           {toolbarBtn(editor.isActive('heading', { level: 2 }), () => editor.chain().focus().toggleHeading({ level: 2 }).run(), <Heading2 size={16} />, 'Heading 2')}
@@ -657,7 +658,8 @@ export function EditorToolbar({
 
           <div className="w-px h-5 bg-[var(--color-border)] mx-1" />
 
-          {/* Code, link, hr */}
+          {/* Draw, Code, link, hr */}
+          {toolbarBtn(false, () => editor.chain().focus().insertContent({ type: 'drawingBlock', attrs: { lines: [] } }).run(), <PenTool size={16} />, 'Insert Drawing')}
           {toolbarBtn(editor.isActive('code'), () => editor.chain().focus().toggleCode().run(), <Code size={16} />, 'Inline Code')}
           {toolbarBtn(editor.isActive('codeBlock'), () => editor.chain().focus().toggleCodeBlock().run(), <span className="text-xs font-mono">{'</>'}</span>, 'Code Block')}
           {toolbarBtn(
