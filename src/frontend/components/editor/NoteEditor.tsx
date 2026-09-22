@@ -31,7 +31,7 @@ export function NoteEditor() {
   const note = useNote(selectedNoteId);
   const { debouncedSave, saveNow } = useAutoSave(selectedNoteId);
   const [title, setTitle] = useState('');
-  const [pageColor, setPageColor] = useState('#ffffff');
+  const [pageColor, setPageColor] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
   const isInitialLoadRef = useRef(true);
   const lastNoteIdRef = useRef<string | null>(null);
@@ -229,7 +229,7 @@ export function NoteEditor() {
             placeholder="Untitled"
             className="w-full text-3xl font-bold bg-transparent border-none outline-none mb-6"
             style={{
-              color: pageColor !== '#ffffff' && pageColor !== '#0f0f13'
+              color: pageColor && pageColor !== '#ffffff' && pageColor !== '#0f0f13'
                 ? '#1a1a2e'
                 : 'var(--color-text-primary)',
             }}

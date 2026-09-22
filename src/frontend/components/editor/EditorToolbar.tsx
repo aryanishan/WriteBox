@@ -89,6 +89,7 @@ const TEXT_COLORS = [
 ];
 
 const PAGE_COLORS = [
+  { label: 'Default', value: '' },
   { label: 'White', value: '#ffffff' },
   { label: 'Warm', value: '#fefce8' },
   { label: 'Cream', value: '#fef3c7' },
@@ -691,7 +692,7 @@ export function EditorToolbar({
                             ? 'border-[var(--color-accent)] ring-2 ring-[var(--color-accent)]/30'
                             : 'border-[var(--color-border)]'
                         )}
-                        style={{ backgroundColor: c.value }}
+                        style={{ backgroundColor: c.value || 'var(--color-bg-primary)' }}
                       />
                       <span className="text-[9px] text-[var(--color-text-muted)]">{c.label}</span>
                     </button>
