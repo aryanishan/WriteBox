@@ -254,11 +254,39 @@ export function EditorToolbar({
   );
 
   const handleExport = useCallback(
-    (format: 'md' | 'txt' | 'json') => {
-      let content: string;
-      let filename: string;
-      let mimeType: string;
+    async (format: 'md' | 'txt' | 'json' | 'pdf') => {
+      let content: string = '';
+      let filename: string = '';
+      let mimeType: string = '';
       const titleSlug = note.title.replace(/\s+/g, '-').toLowerCase() || 'untitled';
+
+      if (format === 'pdf') {
+        try {
+          const html2pdf = (await import('html2pdf.js')).default;
+          const element = document.getElementById('editor-export-area');
+          if (!element) {
+            toast.error('Editor content not found');
+            return;
+          }
+
+          // Temporarily remove placeholder text styling if empty
+          const opt = {
+            margin: [15, 15, 15, 15],
+            filename: `${titleSlug}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
+
+          await html2pdf().set(opt).from(element).save();
+          setShowMenu(false);
+          toast.success('Exported as PDF');
+        } catch (error) {
+          console.error('PDF export failed:', error);
+          toast.error('Failed to export as PDF');
+        }
+        return;
+      }
 
       switch (format) {
         case 'md':
@@ -408,6 +436,9 @@ export function EditorToolbar({
                     </button>
                     <button onClick={() => handleExport('json')} className="w-full text-left px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] flex items-center gap-2 cursor-pointer">
                       <Download size={14} /> Export JSON
+                    </button>
+                    <button onClick={() => handleExport('pdf')} className="w-full text-left px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] flex items-center gap-2 cursor-pointer">
+                      <Download size={14} /> Export PDF
                     </button>
                     <div className="border-t border-[var(--color-border)] my-1" />
                     <button

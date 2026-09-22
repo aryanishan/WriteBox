@@ -172,6 +172,7 @@ export function NoteEditor() {
         style={{ backgroundColor: pageColor }}
       >
         <div
+          id="editor-export-area"
           className="mx-auto px-6 md:px-10 py-8"
           style={{ maxWidth: EDITOR_WIDTHS.normal }}
         >
