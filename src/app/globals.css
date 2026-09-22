@@ -1,26 +1,349 @@
 @import "tailwindcss";
 
+/* ── Design Tokens via CSS Custom Properties ─────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Neutrals */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8f9fa;
+  --color-bg-tertiary: #f1f3f5;
+  --color-bg-hover: #e9ecef;
+  --color-bg-active: #dee2e6;
+
+  --color-text-primary: #1a1a2e;
+  --color-text-secondary: #495057;
+  --color-text-tertiary: #868e96;
+  --color-text-muted: #adb5bd;
+
+  /* Borders */
+  --color-border: #e0e3e8;
+  --color-border-light: #f1f3f5;
+
+  /* Accent */
+  --color-accent: #4f46e5;
+  --color-accent-hover: #4338ca;
+  --color-accent-light: #eef2ff;
+  --color-accent-text: #ffffff;
+
+  /* Status */
+  --color-success: #10b981;
+  --color-success-bg: #ecfdf5;
+  --color-warning: #f59e0b;
+  --color-warning-bg: #fffbeb;
+  --color-error: #ef4444;
+  --color-error-bg: #fef2f2;
+  --color-info: #3b82f6;
+  --color-info-bg: #eff6ff;
+
+  /* Surfaces */
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+
+  /* Sidebar */
+  --sidebar-width: 280px;
+  --sidebar-bg: #f8f9fa;
+
+  /* Editor */
+  --editor-max-width: 760px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ── Dark Mode ───────────────────────────────────────────────────── */
+.dark {
+  --color-bg-primary: #0f0f13;
+  --color-bg-secondary: #16161c;
+  --color-bg-tertiary: #1e1e26;
+  --color-bg-hover: #262630;
+  --color-bg-active: #2e2e3a;
+
+  --color-text-primary: #e8e8ed;
+  --color-text-secondary: #a0a0b0;
+  --color-text-tertiary: #6e6e80;
+  --color-text-muted: #4e4e5e;
+
+  --color-border: #2a2a36;
+  --color-border-light: #1e1e26;
+
+  --color-accent: #6366f1;
+  --color-accent-hover: #818cf8;
+  --color-accent-light: rgba(99, 102, 241, 0.12);
+  --color-accent-text: #ffffff;
+
+  --color-success-bg: rgba(16, 185, 129, 0.1);
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-error-bg: rgba(239, 68, 68, 0.1);
+  --color-info-bg: rgba(59, 130, 246, 0.1);
+
+  --color-surface: #16161c;
+  --color-surface-raised: #1e1e26;
+
+  --sidebar-bg: #12121a;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base Styles ─────────────────────────────────────────────────── */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-text-muted);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-tertiary);
+}
+
+/* ── Selection ───────────────────────────────────────────────────── */
+::selection {
+  background-color: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+/* ── Focus Visible ───────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ── Tiptap Editor Styles ────────────────────────────────────────── */
+.tiptap-editor {
+  outline: none;
+  min-height: 300px;
+  padding: 0;
+  line-height: 1.75;
+}
+
+.tiptap-editor > * + * {
+  margin-top: 0.75em;
+}
+
+.tiptap-editor p.is-editor-empty:first-child::before {
+  color: var(--color-text-muted);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Headings */
+.tiptap-editor h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: var(--color-text-primary);
+}
+
+.tiptap-editor h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+  color: var(--color-text-primary);
+}
+
+.tiptap-editor h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  color: var(--color-text-primary);
+}
+
+/* Paragraphs */
+.tiptap-editor p {
+  color: var(--color-text-secondary);
+}
+
+/* Bold, italic, etc. */
+.tiptap-editor strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.tiptap-editor em {
+  font-style: italic;
+}
+
+.tiptap-editor u {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.tiptap-editor s {
+  text-decoration: line-through;
+}
+
+/* Code */
+.tiptap-editor code {
+  background-color: var(--color-bg-tertiary);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.875em;
+  color: var(--color-accent);
+}
+
+.tiptap-editor pre {
+  background-color: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin: 1em 0;
+  overflow-x: auto;
+}
+
+.tiptap-editor pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+}
+
+/* Blockquote */
+.tiptap-editor blockquote {
+  border-left: 3px solid var(--color-accent);
+  padding-left: 1rem;
+  margin: 1em 0;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+/* Lists */
+.tiptap-editor ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5em 0;
+}
+
+.tiptap-editor ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5em 0;
+}
+
+.tiptap-editor li {
+  margin: 0.25em 0;
+  color: var(--color-text-secondary);
+}
+
+.tiptap-editor li p {
+  margin: 0;
+}
+
+/* Links */
+.tiptap-editor a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.tiptap-editor a:hover {
+  color: var(--color-accent-hover);
+}
+
+/* Horizontal rule */
+.tiptap-editor hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 1.5em 0;
+}
+
+/* ── Sidebar Transition ──────────────────────────────────────────── */
+.sidebar-enter {
+  transform: translateX(-100%);
+}
+
+.sidebar-enter-active {
+  transform: translateX(0);
+  transition: transform var(--transition-slow);
+}
+
+.sidebar-exit {
+  transform: translateX(0);
+}
+
+.sidebar-exit-active {
+  transform: translateX(-100%);
+  transition: transform var(--transition-slow);
+}
+
+/* ── Fade In Animation ───────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-normal) ease-out;
+}
+
+/* ── Slide Up Animation ──────────────────────────────────────────── */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp var(--transition-slow) ease-out;
+}
+
+/* ── Spin Animation ──────────────────────────────────────────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ── Pulse Animation ─────────────────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
