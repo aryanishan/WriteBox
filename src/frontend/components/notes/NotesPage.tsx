@@ -94,6 +94,7 @@ export function NotesPage() {
               ? '● Cloud ready'
               : '';
 
+  return (
     <div className="h-screen flex overflow-hidden bg-[var(--color-bg-primary)]">
       {/* Sidebar (Full Height) */}
       <Sidebar
