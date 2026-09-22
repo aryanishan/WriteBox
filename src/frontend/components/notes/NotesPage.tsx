@@ -7,10 +7,13 @@ import { SearchBar } from '@/frontend/components/search/SearchBar';
 import { useAppState } from '@/frontend/contexts/AppStateProvider';
 import { useKeyboardShortcuts } from '@/frontend/hooks/useKeyboardShortcuts';
 import { useOnlineStatus } from '@/frontend/hooks/useOnlineStatus';
+import { useCloudSync } from '@/frontend/hooks/useCloudSync';
+import { useAuth } from '@/frontend/contexts/AuthProvider';
 import { createNote } from '@/lib/db/notes';
-import { Search, Menu, Wifi, WifiOff, Settings, Sun, Moon } from 'lucide-react';
+import { Search, Menu, Wifi, WifiOff, Settings, Sun, Moon, Cloud } from 'lucide-react';
 import type { NoteFilter } from '@/shared/types/note';
 import { useGoogleDrive } from '@/frontend/contexts/GoogleDriveProvider';
+import { UserMenu, SignInButton } from '@/frontend/components/auth/UserMenu';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useTheme } from '@/frontend/contexts/ThemeProvider';
@@ -24,7 +27,9 @@ export function NotesPage() {
   } = useAppState();
   const { isConnected } = useGoogleDrive();
   const { resolvedTheme, setTheme } = useTheme();
+  const { user } = useAuth();
   const isOnline = useOnlineStatus();
+  const { syncStatus, lastSyncedAt, syncNow } = useCloudSync();
   const [activeFilter, setActiveFilter] = useState<NoteFilter>('all');
 
   const handleNewNote = useCallback(async () => {
@@ -75,6 +80,19 @@ export function NotesPage() {
   );
 
   useKeyboardShortcuts(shortcutHandlers);
+
+  const cloudLabel =
+    syncStatus === 'syncing'
+      ? '↻ Syncing…'
+      : syncStatus === 'synced'
+        ? '✓ Cloud synced'
+        : syncStatus === 'error'
+          ? '✗ Sync error'
+          : syncStatus === 'offline'
+            ? '○ Offline'
+            : user
+              ? '● Cloud ready'
+              : '';
 
   return (
     <div className="h-screen flex flex-col bg-[var(--color-bg-primary)]">
@@ -129,6 +147,17 @@ export function NotesPage() {
           >
             <Settings size={18} />
           </Link>
+
+          {/* Auth — UserMenu or SignIn */}
+          {user ? (
+            <UserMenu
+              syncStatus={syncStatus}
+              lastSyncedAt={lastSyncedAt}
+              onSyncNow={syncNow}
+            />
+          ) : (
+            <SignInButton />
+          )}
         </div>
       </header>
 
@@ -146,9 +175,17 @@ export function NotesPage() {
         <span>
           {isOnline ? '● Online' : '○ Offline'} — Notes saved locally
         </span>
-        <span>
-          Google Drive: {isConnected ? '✓ Connected' : 'Not connected'}
-        </span>
+        <div className="flex items-center gap-4">
+          {user && cloudLabel && (
+            <span className="flex items-center gap-1">
+              <Cloud size={12} />
+              {cloudLabel}
+            </span>
+          )}
+          <span>
+            Google Drive: {isConnected ? '✓ Connected' : 'Not connected'}
+          </span>
+        </div>
       </footer>
 
       {/* Search Overlay */}
@@ -156,3 +193,4 @@ export function NotesPage() {
     </div>
   );
 }
+
