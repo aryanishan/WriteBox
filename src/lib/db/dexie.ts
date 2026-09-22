@@ -19,6 +19,11 @@ class WriteBoxDB extends Dexie {
     this.version(1).stores({
       notes: 'id, title, updatedAt, createdAt, isFavorite, isDeleted, syncStatus',
     });
+
+    // v2: add userId and cloudSyncedAt for Supabase cloud sync
+    this.version(2).stores({
+      notes: 'id, title, updatedAt, createdAt, isFavorite, isDeleted, syncStatus, userId, cloudSyncedAt',
+    });
   }
 }
 
