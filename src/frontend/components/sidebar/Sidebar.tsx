@@ -7,6 +7,7 @@ import { createNote } from '@/lib/db/notes';
 import { SidebarHeader } from './SidebarHeader';
 import { SidebarNav } from './SidebarNav';
 import { NoteList } from './NoteList';
+import { BookList } from './BookList';
 import type { NoteFilter } from '@/shared/types/note';
 import { cn } from '@/shared/utils';
 
@@ -57,7 +58,16 @@ export function Sidebar({ activeFilter, onFilterChange }: SidebarProps) {
       >
         <SidebarHeader onNewNote={handleNewNote} />
         <SidebarNav activeFilter={activeFilter} onFilterChange={onFilterChange} />
-        <NoteList notes={notes} onSelectNote={handleSelectNote} />
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <BookList />
+          
+          <div className="mt-4 border-t border-[var(--color-border)] pt-2">
+            <h3 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider px-4 mb-2">
+              Independent Notes
+            </h3>
+            <NoteList notes={notes} onSelectNote={handleSelectNote} />
+          </div>
+        </div>
       </aside>
     </>
   );

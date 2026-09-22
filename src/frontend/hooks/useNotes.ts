@@ -11,7 +11,7 @@ export function useNotes(filter: NoteFilter = 'all') {
   const notes = useLiveQuery(async () => {
     const allNotes = await db.notes
       .toArray()
-      .then(notes => notes.filter(n => !n.isDeleted));
+      .then(notes => notes.filter(n => !n.isDeleted && !n.chapterId));
 
     let filtered: Note[];
 

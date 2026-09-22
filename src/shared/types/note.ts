@@ -27,6 +27,9 @@ export interface Note {
   /** Soft delete flag — note is hidden but recoverable */
   isDeleted: boolean;
 
+  /** Foreign key to Chapter (optional) */
+  chapterId?: string;
+
   // ── Google Drive sync fields (all optional) ──────────────────────
 
   /** The Google Drive file ID for this note (set after first sync) */
