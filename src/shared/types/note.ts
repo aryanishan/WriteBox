@@ -40,6 +40,14 @@ export interface Note {
 
   /** Current sync status */
   syncStatus: SyncStatus;
+
+  // ── Supabase cloud sync fields (all optional) ────────────────────
+  
+  /** The Supabase auth user ID who owns this note */
+  userId?: string;
+
+  /** Unix timestamp (ms) of the last successful sync to Supabase cloud */
+  cloudSyncedAt?: number;
 }
 
 export type NoteFilter = 'all' | 'favorites' | 'recent';
