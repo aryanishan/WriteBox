@@ -1,14 +1,114 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppState } from '@/frontend/contexts/AppStateProvider';
 import { useBooks, useChapters, useChapterNotes } from '@/frontend/hooks/useBooks';
-import { createBook, createChapter, deleteBook, deleteChapter } from '@/lib/db/books';
+import { createBook, createChapter, deleteBook, deleteChapter, updateBook, updateChapter, getChapters } from '@/lib/db/books';
 import { createNote, deleteNote } from '@/lib/db/notes';
-import { ChevronRight, ChevronDown, Plus, Book as BookIcon, Folder, FileText, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Book as BookIcon, Folder, FileText, Trash2, Pencil, Download, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { Modal } from '@/frontend/components/ui/Modal';
 import { Button } from '@/frontend/components/ui/Button';
+import { db } from '@/lib/db/dexie';
+import { toast } from 'sonner';
+
+// ── Helpers ──────────────────────────────────────────────────────────
+
+/** Convert a Tiptap JSONContent tree → simple HTML string for pdf rendering */
+function jsonContentToHtml(content: any): string {
+  if (!content) return '';
+
+  const renderNode = (node: any): string => {
+    if (!node) return '';
+
+    switch (node.type) {
+      case 'doc':
+        return (node.content ?? []).map(renderNode).join('');
+      case 'paragraph':
+        return `<p>${(node.content ?? []).map(renderNode).join('')}</p>`;
+      case 'heading': {
+        const level = node.attrs?.level ?? 1;
+        return `<h${level}>${(node.content ?? []).map(renderNode).join('')}</h${level}>`;
+      }
+      case 'bulletList':
+        return `<ul>${(node.content ?? []).map(renderNode).join('')}</ul>`;
+      case 'orderedList':
+        return `<ol>${(node.content ?? []).map(renderNode).join('')}</ol>`;
+      case 'listItem':
+        return `<li>${(node.content ?? []).map(renderNode).join('')}</li>`;
+      case 'codeBlock':
+        return `<pre><code>${(node.content ?? []).map(renderNode).join('')}</code></pre>`;
+      case 'blockquote':
+        return `<blockquote>${(node.content ?? []).map(renderNode).join('')}</blockquote>`;
+      case 'horizontalRule':
+        return '<hr/>';
+      case 'hardBreak':
+        return '<br/>';
+      case 'image':
+        return `<img src="${node.attrs?.src ?? ''}" alt="${node.attrs?.alt ?? ''}" style="max-width:100%"/>`;
+      case 'text': {
+        let text: string = node.text ?? '';
+        // escape HTML entities
+        text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (node.marks) {
+          for (const mark of node.marks) {
+            switch (mark.type) {
+              case 'bold': text = `<strong>${text}</strong>`; break;
+              case 'italic': text = `<em>${text}</em>`; break;
+              case 'underline': text = `<u>${text}</u>`; break;
+              case 'strike': text = `<s>${text}</s>`; break;
+              case 'code': text = `<code>${text}</code>`; break;
+              case 'link': text = `<a href="${mark.attrs?.href ?? '#'}">${text}</a>`; break;
+              case 'highlight': text = `<mark>${text}</mark>`; break;
+            }
+          }
+        }
+        return text;
+      }
+      default:
+        return (node.content ?? []).map(renderNode).join('');
+    }
+  };
+
+  return renderNode(content);
+}
+
+/** Generate a single PDF blob from a note's content */
+async function noteToPdfBlob(note: { title: string; content: any }): Promise<Blob> {
+  const html2pdf = (await import('html2pdf.js')).default;
+
+  const htmlBody = jsonContentToHtml(note.content);
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = `
+    <div style="font-family: 'Inter', 'Segoe UI', sans-serif; padding: 16px; color: #1a1a1a;">
+      <h1 style="margin-bottom: 12px; font-size: 22px;">${note.title || 'Untitled'}</h1>
+      <div style="font-size: 14px; line-height: 1.7;">${htmlBody}</div>
+    </div>
+  `;
+  document.body.appendChild(wrapper);
+
+  try {
+    const blob: Blob = await html2pdf()
+      .set({
+        margin: 15,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      })
+      .from(wrapper)
+      .outputPdf('blob');
+    return blob;
+  } finally {
+    document.body.removeChild(wrapper);
+  }
+}
+
+/** Sanitise a filename for use inside a zip */
+function sanitize(name: string): string {
+  return (name || 'untitled').replace(/[<>:"/\\|?*]+/g, '_').trim();
+}
+
+// ── BookList (root component) ────────────────────────────────────────
 
 export function BookList() {
   const books = useBooks();
@@ -78,6 +178,8 @@ export function BookList() {
   );
 }
 
+// ── BookItem ─────────────────────────────────────────────────────────
+
 function BookItem({ book, isExpanded, onToggle, onExpand }: { book: any; isExpanded: boolean; onToggle: () => void; onExpand: () => void }) {
   const chapters = useChapters(book.id);
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
@@ -85,6 +187,31 @@ function BookItem({ book, isExpanded, onToggle, onExpand }: { book: any; isExpan
   const [showChapterModal, setShowChapterModal] = useState(false);
   const [newChapterTitle, setNewChapterTitle] = useState('New Chapter');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // ── Rename state
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(book.title);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Download state
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    if (isRenaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [isRenaming]);
+
+  const commitRename = useCallback(async () => {
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed !== book.title) {
+      await updateBook(book.id, { title: trimmed });
+    } else {
+      setRenameValue(book.title);
+    }
+    setIsRenaming(false);
+  }, [renameValue, book.id, book.title]);
 
   const handleAddChapter = async () => {
     if (newChapterTitle.trim()) {
@@ -100,27 +227,112 @@ function BookItem({ book, isExpanded, onToggle, onExpand }: { book: any; isExpan
     setShowDeleteModal(false);
   };
 
+  const handleDownloadBook = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      const bookSlug = sanitize(book.title);
+
+      // Get all chapters for this book
+      const bookChapters = await getChapters(book.id);
+
+      if (bookChapters.length === 0) {
+        toast.error('No chapters to download');
+        setIsDownloading(false);
+        return;
+      }
+
+      let totalNotes = 0;
+
+      for (const chapter of bookChapters) {
+        const chapterSlug = sanitize(chapter.title);
+        const chapterFolder = zip.folder(`${bookSlug}/${chapterSlug}`);
+
+        // Get notes for this chapter
+        const allNotes = await db.notes.toArray();
+        const chapterNotes = allNotes.filter(n => n.chapterId === chapter.id && !n.isDeleted);
+
+        for (const note of chapterNotes) {
+          const pdfBlob = await noteToPdfBlob({ title: note.title, content: note.content });
+          const noteSlug = sanitize(note.title);
+          chapterFolder!.file(`${noteSlug}.pdf`, pdfBlob);
+          totalNotes++;
+        }
+      }
+
+      if (totalNotes === 0) {
+        toast.error('No notes found in this book');
+        setIsDownloading(false);
+        return;
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${bookSlug}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Downloaded ${totalNotes} note${totalNotes > 1 ? 's' : ''} as ZIP`);
+    } catch (err) {
+      console.error('Book download failed:', err);
+      toast.error('Download failed');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col">
       <div
         className="flex items-center justify-between px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-hover)] cursor-pointer group"
-        onClick={onToggle}
+        onClick={isRenaming ? undefined : onToggle}
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <span className="text-[var(--color-text-tertiary)] shrink-0">
             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </span>
           <BookIcon size={14} className="text-[var(--color-text-muted)] shrink-0" />
-          <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">{book.title}</span>
+          {isRenaming ? (
+            <input
+              ref={renameInputRef}
+              type="text"
+              value={renameValue}
+              onChange={e => setRenameValue(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitRename();
+                if (e.key === 'Escape') { setRenameValue(book.title); setIsRenaming(false); }
+              }}
+              onClick={e => e.stopPropagation()}
+              className="text-sm font-medium text-[var(--color-text-primary)] bg-[var(--color-bg-primary)] border border-[var(--color-accent)] rounded px-1 py-0 outline-none w-full min-w-0"
+            />
+          ) : (
+            <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">{book.title}</span>
+          )}
         </div>
-        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all shrink-0">
-          <button onClick={(e) => { e.stopPropagation(); setShowChapterModal(true); }} className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Add Chapter">
-            <Plus size={14} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }} className="p-1 hover:bg-[var(--color-error-bg)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)]" title="Delete Book">
-            <Trash2 size={14} />
-          </button>
-        </div>
+        {!isRenaming && (
+          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all shrink-0">
+            <button onClick={(e) => { e.stopPropagation(); setRenameValue(book.title); setIsRenaming(true); }} className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent)]" title="Rename Book">
+              <Pencil size={14} />
+            </button>
+            <button onClick={handleDownloadBook} className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent)]" title="Download Book as ZIP" disabled={isDownloading}>
+              {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); setShowChapterModal(true); }} className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Add Chapter">
+              <Plus size={14} />
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }} className="p-1 hover:bg-[var(--color-error-bg)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)]" title="Delete Book">
+              <Trash2 size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
       {isExpanded && (
@@ -169,12 +381,39 @@ function BookItem({ book, isExpanded, onToggle, onExpand }: { book: any; isExpan
   );
 }
 
+// ── ChapterItem ──────────────────────────────────────────────────────
+
 function ChapterItem({ chapter, isExpanded, onToggle, onExpand }: { chapter: any; isExpanded: boolean; onToggle: () => void; onExpand: () => void }) {
   const notes = useChapterNotes(chapter.id);
   const { selectedNoteId, setSelectedNoteId, setSidebarOpen } = useAppState();
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteNoteModal, setShowDeleteNoteModal] = useState<string | null>(null);
+
+  // ── Rename state
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(chapter.title);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Download state
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    if (isRenaming && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [isRenaming]);
+
+  const commitRename = useCallback(async () => {
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed !== chapter.title) {
+      await updateChapter(chapter.id, { title: trimmed });
+    } else {
+      setRenameValue(chapter.title);
+    }
+    setIsRenaming(false);
+  }, [renameValue, chapter.id, chapter.title]);
 
   const handleAddNote = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -198,27 +437,97 @@ function ChapterItem({ chapter, isExpanded, onToggle, onExpand }: { chapter: any
     setShowDeleteNoteModal(null);
   };
 
+  const handleDownloadChapter = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      const chapterSlug = sanitize(chapter.title);
+
+      // Get notes for this chapter
+      const allNotes = await db.notes.toArray();
+      const chapterNotes = allNotes.filter(n => n.chapterId === chapter.id && !n.isDeleted);
+
+      if (chapterNotes.length === 0) {
+        toast.error('No notes to download');
+        setIsDownloading(false);
+        return;
+      }
+
+      const folder = zip.folder(chapterSlug);
+
+      for (const note of chapterNotes) {
+        const pdfBlob = await noteToPdfBlob({ title: note.title, content: note.content });
+        const noteSlug = sanitize(note.title);
+        folder!.file(`${noteSlug}.pdf`, pdfBlob);
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${chapterSlug}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Downloaded ${chapterNotes.length} note${chapterNotes.length > 1 ? 's' : ''} as ZIP`);
+    } catch (err) {
+      console.error('Chapter download failed:', err);
+      toast.error('Download failed');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col">
       <div
         className="flex items-center justify-between px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-hover)] cursor-pointer group"
-        onClick={onToggle}
+        onClick={isRenaming ? undefined : onToggle}
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <span className="text-[var(--color-text-tertiary)] shrink-0">
             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </span>
           <Folder size={14} className="text-[var(--color-text-muted)] shrink-0" />
-          <span className="text-sm text-[var(--color-text-secondary)] truncate">{chapter.title}</span>
+          {isRenaming ? (
+            <input
+              ref={renameInputRef}
+              type="text"
+              value={renameValue}
+              onChange={e => setRenameValue(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitRename();
+                if (e.key === 'Escape') { setRenameValue(chapter.title); setIsRenaming(false); }
+              }}
+              onClick={e => e.stopPropagation()}
+              className="text-sm text-[var(--color-text-secondary)] bg-[var(--color-bg-primary)] border border-[var(--color-accent)] rounded px-1 py-0 outline-none w-full min-w-0"
+            />
+          ) : (
+            <span className="text-sm text-[var(--color-text-secondary)] truncate">{chapter.title}</span>
+          )}
         </div>
-        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all shrink-0">
-          <button onClick={handleAddNote} className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Add Note">
-            <Plus size={14} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }} className="p-1 hover:bg-[var(--color-error-bg)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)]" title="Delete Chapter">
-            <Trash2 size={14} />
-          </button>
-        </div>
+        {!isRenaming && (
+          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all shrink-0">
+            <button onClick={(e) => { e.stopPropagation(); setRenameValue(chapter.title); setIsRenaming(true); }} className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent)]" title="Rename Chapter">
+              <Pencil size={14} />
+            </button>
+            <button onClick={handleDownloadChapter} className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent)]" title="Download Chapter as ZIP" disabled={isDownloading}>
+              {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            </button>
+            <button onClick={handleAddNote} className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Add Note">
+              <Plus size={14} />
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }} className="p-1 hover:bg-[var(--color-error-bg)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)]" title="Delete Chapter">
+              <Trash2 size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
       {isExpanded && (
