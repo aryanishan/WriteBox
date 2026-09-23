@@ -435,6 +435,14 @@ export function EditorToolbar({
               />
             </button>
 
+            <button
+              onClick={() => handleExport('pdf')}
+              className="p-1.5 rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer"
+              title="Export as PDF"
+            >
+              <Download size={16} />
+            </button>
+
             {/* More menu */}
             <div className="relative">
               <button
