@@ -3,6 +3,9 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { updateNote } from '@/lib/db/notes';
 import { useAppState } from '@/frontend/contexts/AppStateProvider';
+import { useGoogleDrive } from '@/frontend/contexts/GoogleDriveProvider';
+import { syncNoteToDrive } from '@/lib/google-drive/sync';
+import { db } from '@/lib/db/dexie';
 import { AUTOSAVE_DEBOUNCE_MS } from '@/shared/constants';
 import type { JSONContent } from '@tiptap/react';
 
@@ -13,6 +16,7 @@ import type { JSONContent } from '@tiptap/react';
  */
 export function useAutoSave(noteId: string | null) {
   const { setSaveStatus } = useAppState();
+  const { driveState } = useGoogleDrive();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<{ title?: string; content?: JSONContent } | null>(null);
 
@@ -25,6 +29,13 @@ export function useAutoSave(noteId: string | null) {
         await updateNote(noteId, updates);
         setSaveStatus('saved');
 
+        // Background sync to Google Drive
+        if (driveState.isConnected && driveState.accessToken) {
+          db.notes.get(noteId).then(note => {
+            if (note) syncNoteToDrive(note, driveState).catch(console.error);
+          });
+        }
+
         // Reset to idle after 2 seconds
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (error) {
@@ -32,7 +43,7 @@ export function useAutoSave(noteId: string | null) {
         setSaveStatus('error');
       }
     },
-    [noteId, setSaveStatus]
+    [noteId, setSaveStatus, driveState]
   );
 
   const debouncedSave = useCallback(
