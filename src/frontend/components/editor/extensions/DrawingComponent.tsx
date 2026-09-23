@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { NodeViewWrapper, NodeViewProps } from '@tiptap/react';
-import { Trash2, RotateCcw, Palette } from 'lucide-react';
+import { Trash2, RotateCcw, Palette, GripHorizontal } from 'lucide-react';
 import { cn } from '@/shared/utils';
 
 export interface Point {
@@ -31,6 +31,10 @@ export function DrawingComponent(props: NodeViewProps) {
   const [isEraserMode, setIsEraserMode] = useState(false);
   const [currentLine, setCurrentLine] = useState<Stroke | null>(null);
   const [showColors, setShowColors] = useState(false);
+  const [height, setHeight] = useState(node.attrs.height || 300);
+  const isResizing = useRef(false);
+  const startY = useRef(0);
+  const startHeight = useRef(0);
 
   // Redraw all lines when lines or currentLine changes
   const redraw = useCallback(() => {
@@ -83,7 +87,7 @@ export function DrawingComponent(props: NodeViewProps) {
     const handleResize = () => redraw();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [redraw]);
+  }, [redraw, height]);
 
   // Prevent drag and drop of the whole node while drawing
   const getCoordinates = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -131,12 +135,34 @@ export function DrawingComponent(props: NodeViewProps) {
     updateAttributes({ lines: [] });
   };
 
+  const handleResizePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    isResizing.current = true;
+    startY.current = e.clientY;
+    startHeight.current = height;
+  };
+
+  const handleResizePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isResizing.current) return;
+    const dy = e.clientY - startY.current;
+    const newHeight = Math.max(100, startHeight.current + dy);
+    setHeight(newHeight);
+  };
+
+  const handleResizePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isResizing.current) return;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    isResizing.current = false;
+    updateAttributes({ height });
+  };
+
   return (
     <NodeViewWrapper className="my-6 relative group" data-drag-handle>
       <div 
         ref={containerRef}
-        className="relative w-full rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden"
-        style={{ minHeight: '400px' }}
+        className="relative w-full rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden transition-[height] duration-0"
+        style={{ height: `${height}px` }}
       >
         <canvas
           ref={canvasRef}
@@ -211,6 +237,17 @@ export function DrawingComponent(props: NodeViewProps) {
           >
             <Trash2 size={16} />
           </button>
+        </div>
+
+        {/* Resize Handle */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-[var(--color-border)]/50 to-transparent flex items-end justify-center cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity"
+          onPointerDown={handleResizePointerDown}
+          onPointerMove={handleResizePointerMove}
+          onPointerUp={handleResizePointerUp}
+          onPointerCancel={handleResizePointerUp}
+        >
+          <GripHorizontal size={14} className="text-[var(--color-text-tertiary)] mb-0.5" />
         </div>
       </div>
     </NodeViewWrapper>

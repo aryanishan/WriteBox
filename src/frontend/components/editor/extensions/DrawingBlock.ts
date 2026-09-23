@@ -23,6 +23,18 @@ export const DrawingBlock = Node.create({
           };
         },
       },
+      height: {
+        default: 300,
+        parseHTML: (element) => {
+          const heightAttr = element.getAttribute('data-height');
+          return heightAttr ? parseInt(heightAttr, 10) : 300;
+        },
+        renderHTML: (attributes) => {
+          return {
+            'data-height': attributes.height,
+          };
+        },
+      },
     };
   },
 
