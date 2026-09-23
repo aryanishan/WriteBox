@@ -12,9 +12,13 @@ export interface Stroke {
   color: string;
   width: number;
   points: Point[];
+  isEraser?: boolean;
 }
 
-const COLORS = ['#000000', '#ef4444', '#3b82f6', '#22c55e', '#eab308'];
+const COLORS = [
+  '#000000', '#ffffff', '#9ca3af', '#fbcfe8', '#bfdbfe', 
+  '#ef4444', '#3b82f6', '#22c55e', '#eab308'
+];
 
 export function DrawingComponent(props: NodeViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -24,6 +28,7 @@ export function DrawingComponent(props: NodeViewProps) {
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#000000');
+  const [isEraserMode, setIsEraserMode] = useState(false);
   const [currentLine, setCurrentLine] = useState<Stroke | null>(null);
   const [showColors, setShowColors] = useState(false);
 
@@ -56,8 +61,9 @@ export function DrawingComponent(props: NodeViewProps) {
 
     allLines.forEach((line) => {
       if (line.points.length === 0) return;
-      ctx.strokeStyle = line.color;
-      ctx.lineWidth = line.width;
+      ctx.globalCompositeOperation = line.isEraser ? 'destination-out' : 'source-over';
+      ctx.strokeStyle = line.isEraser ? 'rgba(0,0,0,1)' : line.color;
+      ctx.lineWidth = line.isEraser ? line.width * 5 : line.width;
 
       ctx.beginPath();
       ctx.moveTo(line.points[0].x, line.points[0].y);
@@ -97,6 +103,7 @@ export function DrawingComponent(props: NodeViewProps) {
       color,
       width: 3,
       points: [getCoordinates(e)],
+      isEraser: isEraserMode,
     });
   };
 
@@ -145,22 +152,28 @@ export function DrawingComponent(props: NodeViewProps) {
           
           <div className="relative">
             <button
-              onClick={() => setShowColors(!showColors)}
-              className="p-1.5 rounded-[var(--radius-sm)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+              onClick={() => {
+                setIsEraserMode(false);
+                setShowColors(!showColors);
+              }}
+              className={cn(
+                "p-1.5 rounded-[var(--radius-sm)] transition-colors",
+                !isEraserMode ? "bg-[var(--color-bg-hover)] text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
+              )}
               title="Change Color"
             >
-              <Palette size={16} style={{ color }} />
+              <Palette size={16} style={{ color: !isEraserMode ? color : 'currentColor' }} />
             </button>
             
             {showColors && (
-              <div className="absolute top-full right-0 mt-1 flex gap-1 p-1 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-md">
+              <div className="absolute top-full right-0 mt-1 flex gap-1 p-1 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-[var(--radius-md)] shadow-md flex-wrap w-[120px]">
                 {COLORS.map(c => (
                   <button
                     key={c}
-                    onClick={() => { setColor(c); setShowColors(false); }}
+                    onClick={() => { setColor(c); setIsEraserMode(false); setShowColors(false); }}
                     className={cn(
                       "w-6 h-6 rounded-full border-2 transition-transform hover:scale-110",
-                      color === c ? "border-gray-400" : "border-transparent"
+                      color === c && !isEraserMode ? "border-gray-400" : "border-[var(--color-border)]"
                     )}
                     style={{ backgroundColor: c }}
                   />
@@ -168,6 +181,20 @@ export function DrawingComponent(props: NodeViewProps) {
               </div>
             )}
           </div>
+
+          <button
+            onClick={() => {
+              setIsEraserMode(true);
+              setShowColors(false);
+            }}
+            className={cn(
+              "p-1.5 rounded-[var(--radius-sm)] transition-colors",
+              isEraserMode ? "bg-[var(--color-bg-hover)] text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
+            )}
+            title="Eraser"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>
+          </button>
 
           <button
             onClick={clearCanvas}
