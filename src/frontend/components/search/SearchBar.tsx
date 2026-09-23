@@ -77,7 +77,7 @@ export function SearchBar() {
       {/* Search Panel */}
       <div className="relative w-full max-w-lg bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-lg animate-slide-up overflow-hidden">
         {/* Search Input */}
-        <div className="flex items-center px-4 border-b border-[var(--color-border)]">
+        <div className="flex items-center gap-2 px-4 py-1 border-b border-[var(--color-border)]">
           <Search size={18} className="text-[var(--color-text-muted)] shrink-0" />
           <input
             ref={inputRef}
@@ -86,17 +86,17 @@ export function SearchBar() {
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search notes..."
-            className="flex-1 px-3 py-3.5 text-sm bg-transparent text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-muted)]"
+            className="flex-1 px-1 py-3 text-base bg-transparent text-[var(--color-text-primary)] outline-none border-none ring-0 focus:outline-none focus:ring-0 placeholder:text-[var(--color-text-muted)]"
           />
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="p-1 rounded-[var(--radius-sm)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] cursor-pointer"
+              className="p-1 rounded-[var(--radius-sm)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] cursor-pointer bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)]"
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           )}
-          <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] rounded border border-[var(--color-border)] hidden sm:inline">
+          <kbd className="ml-1 px-1.5 py-0.5 text-[10px] bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] rounded border border-[var(--color-border)] hidden sm:inline">
             ESC
           </kbd>
         </div>
