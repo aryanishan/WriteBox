@@ -5,19 +5,26 @@ import { useAppState } from '@/frontend/contexts/AppStateProvider';
 import { useBooks, useChapters, useChapterNotes } from '@/frontend/hooks/useBooks';
 import { createBook, createChapter, deleteBook, deleteChapter } from '@/lib/db/books';
 import { createNote, deleteNote } from '@/lib/db/notes';
-import { ChevronRight, ChevronDown, Plus, Book as BookIcon, Folder, FileText, Trash2, MoreHorizontal } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Book as BookIcon, Folder, FileText, Trash2 } from 'lucide-react';
 import { cn } from '@/shared/utils';
+import { Modal } from '@/frontend/components/ui/Modal';
+import { Button } from '@/frontend/components/ui/Button';
 
 export function BookList() {
   const books = useBooks();
   const [expandedBooks, setExpandedBooks] = useState<Record<string, boolean>>({});
+  
+  // Modals state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newBookTitle, setNewBookTitle] = useState('New Book');
 
   const handleCreateBook = async () => {
-    const title = window.prompt('Enter book name:', 'New Book');
-    if (title) {
-      const book = await createBook(title);
+    if (newBookTitle.trim()) {
+      const book = await createBook(newBookTitle.trim());
       setExpandedBooks(prev => ({ ...prev, [book.id]: true }));
     }
+    setShowCreateModal(false);
+    setNewBookTitle('New Book');
   };
 
   return (
@@ -27,7 +34,7 @@ export function BookList() {
           Books
         </h3>
         <button
-          onClick={handleCreateBook}
+          onClick={() => setShowCreateModal(true)}
           className="opacity-0 group-hover:opacity-100 p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-all cursor-pointer rounded hover:bg-[var(--color-bg-hover)]"
           title="New Book"
         >
@@ -51,6 +58,22 @@ export function BookList() {
           </div>
         )}
       </div>
+
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create Book">
+        <input
+          type="text"
+          value={newBookTitle}
+          onChange={e => setNewBookTitle(e.target.value)}
+          placeholder="Book Name"
+          className="w-full px-3 py-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] text-sm mb-4 outline-none focus:border-[var(--color-accent)]"
+          onKeyDown={e => e.key === 'Enter' && handleCreateBook()}
+          autoFocus
+        />
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+          <Button variant="primary" onClick={handleCreateBook}>Create</Button>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -59,20 +82,22 @@ function BookItem({ book, isExpanded, onToggle, onExpand }: { book: any; isExpan
   const chapters = useChapters(book.id);
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
 
-  const handleAddChapter = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const title = window.prompt('Enter chapter name:', 'New Chapter');
-    if (title) {
-      await createChapter(book.id, title);
+  const [showChapterModal, setShowChapterModal] = useState(false);
+  const [newChapterTitle, setNewChapterTitle] = useState('New Chapter');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const handleAddChapter = async () => {
+    if (newChapterTitle.trim()) {
+      await createChapter(book.id, newChapterTitle.trim());
       onExpand(); // ensure book is open
     }
+    setShowChapterModal(false);
+    setNewChapterTitle('New Chapter');
   };
 
-  const handleDeleteBook = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm(`Delete book "${book.title}" and all its chapters/notes?`)) {
-      await deleteBook(book.id);
-    }
+  const handleDeleteBook = async () => {
+    await deleteBook(book.id);
+    setShowDeleteModal(false);
   };
 
   return (
@@ -89,10 +114,10 @@ function BookItem({ book, isExpanded, onToggle, onExpand }: { book: any; isExpan
           <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">{book.title}</span>
         </div>
         <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all shrink-0">
-          <button onClick={handleAddChapter} className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Add Chapter">
+          <button onClick={(e) => { e.stopPropagation(); setShowChapterModal(true); }} className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Add Chapter">
             <Plus size={14} />
           </button>
-          <button onClick={handleDeleteBook} className="p-1 hover:bg-[var(--color-error-bg)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)]" title="Delete Book">
+          <button onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }} className="p-1 hover:bg-[var(--color-error-bg)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)]" title="Delete Book">
             <Trash2 size={14} />
           </button>
         </div>
@@ -114,6 +139,32 @@ function BookItem({ book, isExpanded, onToggle, onExpand }: { book: any; isExpan
           )}
         </div>
       )}
+
+      <Modal isOpen={showChapterModal} onClose={() => setShowChapterModal(false)} title="Create Chapter">
+        <input
+          type="text"
+          value={newChapterTitle}
+          onChange={e => setNewChapterTitle(e.target.value)}
+          placeholder="Chapter Name"
+          className="w-full px-3 py-2 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] text-sm mb-4 outline-none focus:border-[var(--color-accent)]"
+          onKeyDown={e => e.key === 'Enter' && handleAddChapter()}
+          autoFocus
+        />
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setShowChapterModal(false)}>Cancel</Button>
+          <Button variant="primary" onClick={handleAddChapter}>Create</Button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} title="Delete Book">
+        <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+          Are you sure you want to delete "{book.title}" and all its chapters/notes?
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
+          <Button variant="danger" onClick={handleDeleteBook}>Delete</Button>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -122,23 +173,29 @@ function ChapterItem({ chapter, isExpanded, onToggle, onExpand }: { chapter: any
   const notes = useChapterNotes(chapter.id);
   const { selectedNoteId, setSelectedNoteId, setSidebarOpen } = useAppState();
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteNoteModal, setShowDeleteNoteModal] = useState<string | null>(null);
+
   const handleAddNote = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const note = await createNote('Untitled Note');
-    // We must hack it to attach the chapter ID since createNote doesn't take it currently.
-    // Or we can import db and update it, wait let's use a cleaner way.
-    // I will write it directly here for now, but really createNote should accept chapterId.
     const { db } = await import('@/lib/db/dexie');
     await db.notes.update(note.id, { chapterId: chapter.id });
     setSelectedNoteId(note.id);
     onExpand();
   };
 
-  const handleDeleteChapter = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm(`Delete chapter "${chapter.title}" and its notes?`)) {
-      await deleteChapter(chapter.id);
+  const handleDeleteChapter = async () => {
+    await deleteChapter(chapter.id);
+    setShowDeleteModal(false);
+  };
+
+  const handleDeleteNote = async () => {
+    if (showDeleteNoteModal) {
+      await deleteNote(showDeleteNoteModal);
+      if (selectedNoteId === showDeleteNoteModal) setSelectedNoteId(null);
     }
+    setShowDeleteNoteModal(null);
   };
 
   return (
@@ -158,7 +215,7 @@ function ChapterItem({ chapter, isExpanded, onToggle, onExpand }: { chapter: any
           <button onClick={handleAddNote} className="p-1 hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Add Note">
             <Plus size={14} />
           </button>
-          <button onClick={handleDeleteChapter} className="p-1 hover:bg-[var(--color-error-bg)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)]" title="Delete Chapter">
+          <button onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }} className="p-1 hover:bg-[var(--color-error-bg)] rounded text-[var(--color-text-muted)] hover:text-[var(--color-error)]" title="Delete Chapter">
             <Trash2 size={14} />
           </button>
         </div>
@@ -185,12 +242,9 @@ function ChapterItem({ chapter, isExpanded, onToggle, onExpand }: { chapter: any
                 <span className="text-xs truncate">{note.title || 'Untitled'}</span>
               </div>
               <button
-                onClick={async (e) => {
+                onClick={(e) => {
                   e.stopPropagation();
-                  if (window.confirm('Delete note?')) {
-                    await deleteNote(note.id);
-                    if (selectedNoteId === note.id) setSelectedNoteId(null);
-                  }
+                  setShowDeleteNoteModal(note.id);
                 }}
                 className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--color-error-bg)] rounded hover:text-[var(--color-error)] shrink-0"
               >
@@ -203,6 +257,26 @@ function ChapterItem({ chapter, isExpanded, onToggle, onExpand }: { chapter: any
           )}
         </div>
       )}
+
+      <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} title="Delete Chapter">
+        <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+          Are you sure you want to delete "{chapter.title}" and its notes?
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
+          <Button variant="danger" onClick={handleDeleteChapter}>Delete</Button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={!!showDeleteNoteModal} onClose={() => setShowDeleteNoteModal(null)} title="Delete Note">
+        <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+          Are you sure you want to delete this note?
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setShowDeleteNoteModal(null)}>Cancel</Button>
+          <Button variant="danger" onClick={handleDeleteNote}>Delete</Button>
+        </div>
+      </Modal>
     </div>
   );
 }
