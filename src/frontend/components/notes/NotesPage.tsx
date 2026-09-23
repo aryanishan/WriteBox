@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Sidebar } from '@/frontend/components/sidebar/Sidebar';
 import { NoteEditor } from '@/frontend/components/editor/NoteEditor';
 import { SearchBar } from '@/frontend/components/search/SearchBar';
@@ -10,7 +10,7 @@ import { useOnlineStatus } from '@/frontend/hooks/useOnlineStatus';
 import { useCloudSync } from '@/frontend/hooks/useCloudSync';
 import { useAuth } from '@/frontend/contexts/AuthProvider';
 import { createNote } from '@/lib/db/notes';
-import { Search, Menu, Wifi, WifiOff, Settings, Sun, Moon, Cloud } from 'lucide-react';
+import { Search, Menu, Wifi, WifiOff, Settings, Sun, Moon, Cloud, Maximize, Minimize } from 'lucide-react';
 import type { NoteFilter } from '@/shared/types/note';
 import { useGoogleDrive } from '@/frontend/contexts/GoogleDriveProvider';
 import { UserMenu, SignInButton } from '@/frontend/components/auth/UserMenu';
@@ -31,6 +31,26 @@ export function NotesPage() {
   const isOnline = useOnlineStatus();
   const { syncStatus, lastSyncedAt, syncNow } = useCloudSync();
   const [activeFilter, setActiveFilter] = useState<NoteFilter>('all');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Keep state in sync when user exits fullscreen via Escape or browser UI
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      toast.error('Fullscreen is not supported in this browser');
+    }
+  }, []);
 
   const handleNewNote = useCallback(async () => {
     const note = await createNote();
@@ -137,6 +157,17 @@ export function NotesPage() {
                 <WifiOff size={14} className="text-[var(--color-warning)]" />
               )}
             </div>
+
+            {/* Fullscreen toggle */}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+              className="p-1.5 rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer"
+            >
+              {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+            </button>
 
             <button
               type="button"
