@@ -13,6 +13,8 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
 import FontFamily from '@tiptap/extension-font-family';
 import ImageResize from 'tiptap-extension-resize-image';
+import { FontSize } from './extensions/FontSize';
+import { FileAttachment } from './extensions/FileAttachment';
 import { DrawingBlock } from './extensions/DrawingBlock';
 import { common, createLowlight } from 'lowlight';
 import { EditorToolbar } from './EditorToolbar';
@@ -62,8 +64,10 @@ export function NoteEditor() {
         multicolor: true,
       }),
       FontFamily,
+      FontSize,
       ImageResize,
       DrawingBlock,
+      FileAttachment,
     ],
     immediatelyRender: false,
     editorProps: {
