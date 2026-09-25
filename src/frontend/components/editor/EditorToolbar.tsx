@@ -45,6 +45,8 @@ import {
   ChevronDown,
   PenTool,
   Image as ImageIcon,
+  Text,
+  Paperclip,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -53,6 +55,13 @@ import { toast } from 'sonner';
 const FONT_FAMILIES = [
   { label: 'Default', value: '' },
   { label: 'Inter', value: 'Inter' },
+  { label: 'Roboto', value: 'Roboto' },
+  { label: 'Open Sans', value: 'Open Sans' },
+  { label: 'Lato', value: 'Lato' },
+  { label: 'Montserrat', value: 'Montserrat' },
+  { label: 'Oswald', value: 'Oswald' },
+  { label: 'Raleway', value: 'Raleway' },
+  { label: 'Nunito', value: 'Nunito' },
   { label: 'Georgia', value: 'Georgia' },
   { label: 'Times New Roman', value: 'Times New Roman' },
   { label: 'Arial', value: 'Arial' },
@@ -60,6 +69,14 @@ const FONT_FAMILIES = [
   { label: 'Courier New', value: 'Courier New' },
   { label: 'Comic Sans MS', value: 'Comic Sans MS' },
   { label: 'Trebuchet MS', value: 'Trebuchet MS' },
+];
+
+const FONT_SIZES = [
+  { label: 'Small', value: '12px' },
+  { label: 'Normal', value: '16px' },
+  { label: 'Large', value: '20px' },
+  { label: 'Huge', value: '24px' },
+  { label: 'Title', value: '32px' },
 ];
 
 const HIGHLIGHT_COLORS = [
@@ -140,9 +157,11 @@ export function EditorToolbar({
   const [linkUrl, setLinkUrl] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
 
   // Dropdown states
   const [showFontDropdown, setShowFontDropdown] = useState(false);
+  const [showFontSizeDropdown, setShowFontSizeDropdown] = useState(false);
   const [showTextColorDropdown, setShowTextColorDropdown] = useState(false);
   const [showHighlightDropdown, setShowHighlightDropdown] = useState(false);
   const [showPageColorDropdown, setShowPageColorDropdown] = useState(false);
@@ -155,6 +174,7 @@ export function EditorToolbar({
   // Close all dropdowns when clicking outside
   const closeAllDropdowns = useCallback(() => {
     setShowFontDropdown(false);
+    setShowFontSizeDropdown(false);
     setShowTextColorDropdown(false);
     setShowHighlightDropdown(false);
     setShowPageColorDropdown(false);
@@ -203,6 +223,18 @@ export function EditorToolbar({
         editor.chain().focus().unsetFontFamily().run();
       }
       setShowFontDropdown(false);
+    },
+    [editor]
+  );
+
+  const handleSetFontSize = useCallback(
+    (size: string) => {
+      if (size) {
+        editor.chain().focus().setFontSize(size).run();
+      } else {
+        editor.chain().focus().unsetFontSize().run();
+      }
+      setShowFontSizeDropdown(false);
     },
     [editor]
   );
@@ -270,6 +302,31 @@ export function EditorToolbar({
       }
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+    },
+    [editor]
+  );
+
+  const handleAttachmentUpload = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            const sizeInKB = Math.round(file.size / 1024);
+            const sizeStr = sizeInKB > 1024 ? `${(sizeInKB / 1024).toFixed(1)} MB` : `${sizeInKB} KB`;
+            editor.chain().focus().setFileAttachment({ 
+              src: event.target.result as string,
+              filename: file.name,
+              size: sizeStr
+            }).run();
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+      if (attachmentInputRef.current) {
+        attachmentInputRef.current.value = '';
       }
     },
     [editor]
@@ -635,6 +692,37 @@ export function EditorToolbar({
             </DropdownWrapper>
           </div>
 
+          {/* 🔠 Font Size */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => { closeAllDropdowns(); setShowFontSizeDropdown(!showFontSizeDropdown); }}
+              title="Font Size"
+              className="flex items-center gap-1 px-2 py-1.5 rounded-[var(--radius-sm)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer text-xs"
+            >
+              <Text size={14} />
+              <ChevronDown size={10} />
+            </button>
+            <DropdownWrapper show={showFontSizeDropdown} onClose={() => setShowFontSizeDropdown(false)}>
+              <div className="w-32 max-h-60 overflow-y-auto">
+                {FONT_SIZES.map(s => (
+                  <button
+                    key={s.value || 'default'}
+                    onClick={() => handleSetFontSize(s.value)}
+                    className={cn(
+                      'w-full text-left px-3 py-2 text-sm cursor-pointer transition-colors',
+                      (s.value && editor.isActive('textStyle', { fontSize: s.value }))
+                        ? 'bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+                        : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </DropdownWrapper>
+          </div>
+
           {/* 🎨 Text Color */}
           <div className="relative">
             <button
@@ -722,6 +810,7 @@ export function EditorToolbar({
           {/* Draw, Image, Code, link, hr */}
           {toolbarBtn(false, () => editor.chain().focus().insertContent({ type: 'drawingBlock', attrs: { lines: [] } }).run(), <PenTool size={16} />, 'Insert Drawing')}
           {toolbarBtn(editor.isActive('image'), () => fileInputRef.current?.click(), <ImageIcon size={16} />, 'Insert Image')}
+          {toolbarBtn(false, () => attachmentInputRef.current?.click(), <Paperclip size={16} />, 'Attach File')}
           {toolbarBtn(editor.isActive('code'), () => editor.chain().focus().toggleCode().run(), <Code size={16} />, 'Inline Code')}
           {toolbarBtn(editor.isActive('codeBlock'), () => editor.chain().focus().toggleCodeBlock().run(), <span className="text-xs font-mono">{'</>'}</span>, 'Code Block')}
           {toolbarBtn(
@@ -774,6 +863,14 @@ export function EditorToolbar({
         ref={fileInputRef}
         onChange={handleImageUpload}
         accept="image/*"
+        className="hidden"
+      />
+
+      {/* Hidden File Input for Attachments */}
+      <input
+        type="file"
+        ref={attachmentInputRef}
+        onChange={handleAttachmentUpload}
         className="hidden"
       />
     </>
