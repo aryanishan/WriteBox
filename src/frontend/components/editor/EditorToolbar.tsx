@@ -47,6 +47,7 @@ import {
   Image as ImageIcon,
   Text,
   Paperclip,
+  PencilRuler,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -149,7 +150,7 @@ export function EditorToolbar({
   onPageColorChange,
 }: EditorToolbarProps) {
   const { isConnected } = useGoogleDrive();
-  const { setSelectedNoteId } = useAppState();
+  const { setSelectedNoteId, saveStatus, roughWorkOpen, toggleRoughWork } = useAppState();
 
   // Modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -826,6 +827,11 @@ export function EditorToolbar({
           {/* Undo/Redo */}
           {toolbarBtn(false, () => editor.chain().focus().undo().run(), <Undo size={16} />, 'Undo (Ctrl+Z)')}
           {toolbarBtn(false, () => editor.chain().focus().redo().run(), <Redo size={16} />, 'Redo (Ctrl+Shift+Z)')}
+
+          <div className="w-px h-5 bg-[var(--color-border)] mx-1" />
+
+          {/* Rough Work */}
+          {toolbarBtn(roughWorkOpen, toggleRoughWork, <PencilRuler size={16} />, 'Toggle Rough Work')}
         </div>
       </div>
 
