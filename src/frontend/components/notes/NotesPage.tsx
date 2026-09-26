@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Sidebar } from '@/frontend/components/sidebar/Sidebar';
 import { NoteEditor } from '@/frontend/components/editor/NoteEditor';
+import { RoughWorkPanel } from '@/frontend/components/editor/RoughWorkPanel';
 import { SearchBar } from '@/frontend/components/search/SearchBar';
 import { useAppState } from '@/frontend/contexts/AppStateProvider';
 import { useKeyboardShortcuts } from '@/frontend/hooks/useKeyboardShortcuts';
@@ -221,6 +222,9 @@ export function NotesPage() {
           </div>
         </footer>
       </div>
+
+      {/* Rough Work Panel */}
+      <RoughWorkPanel />
 
       {/* Search Overlay */}
       <SearchBar />
