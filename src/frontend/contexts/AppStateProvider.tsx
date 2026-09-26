@@ -13,6 +13,9 @@ interface AppStateContextValue {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  roughWorkOpen: boolean;
+  setRoughWorkOpen: (open: boolean) => void;
+  toggleRoughWork: () => void;
   saveStatus: SaveStatus;
   setSaveStatus: (status: SaveStatus) => void;
   searchOpen: boolean;
@@ -65,8 +68,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     () => DEFAULT_SETTINGS.editor
   );
 
+  const [roughWorkOpen, setRoughWorkOpen] = useState(false);
+
   const toggleSidebar = useCallback(() => {
     setSidebarOpen(prev => !prev);
+  }, []);
+
+  const toggleRoughWork = useCallback(() => {
+    setRoughWorkOpen(prev => !prev);
   }, []);
 
   const setEditorSettings = useCallback((settings: EditorSettings) => {
@@ -85,6 +94,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         sidebarOpen,
         setSidebarOpen,
         toggleSidebar,
+        roughWorkOpen,
+        setRoughWorkOpen,
+        toggleRoughWork,
         saveStatus,
         setSaveStatus,
         searchOpen,
