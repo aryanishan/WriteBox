@@ -67,7 +67,7 @@ export async function getNotesByFilter(filter: NoteFilter): Promise<Note[]> {
 
 export async function updateNote(
   id: string,
-  updates: Partial<Pick<Note, 'title' | 'content' | 'isFavorite'>>
+  updates: Partial<Pick<Note, 'title' | 'content' | 'isFavorite' | 'backgroundColor' | 'textColor'>>
 ): Promise<void> {
   const patchData: Partial<Note> = {
     ...updates,
