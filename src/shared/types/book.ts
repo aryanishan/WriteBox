@@ -24,6 +24,12 @@ export interface Book {
 
   /** Unix timestamp (ms) of the last successful sync to Supabase cloud */
   cloudSyncedAt?: number;
+
+  /** Custom background color for the book panel */
+  backgroundColor?: string;
+
+  /** Custom text color for the book panel */
+  textColor?: string;
 }
 
 export interface Chapter {
@@ -53,4 +59,10 @@ export interface Chapter {
 
   /** Unix timestamp (ms) of the last successful sync to Supabase cloud */
   cloudSyncedAt?: number;
+
+  /** Custom background color for the chapter panel */
+  backgroundColor?: string;
+
+  /** Custom text color for the chapter panel */
+  textColor?: string;
 }
