@@ -51,6 +51,12 @@ export interface Note {
 
   /** Unix timestamp (ms) of the last successful sync to Supabase cloud */
   cloudSyncedAt?: number;
+
+  /** Custom background color for the note panel */
+  backgroundColor?: string;
+
+  /** Custom text color for the note panel */
+  textColor?: string;
 }
 
 export type NoteFilter = 'all' | 'favorites' | 'recent';
