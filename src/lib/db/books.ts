@@ -24,7 +24,7 @@ export async function getBooks(): Promise<Book[]> {
   return all.filter(b => !b.isDeleted).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-export async function updateBook(id: string, updates: Partial<Pick<Book, 'title'>>): Promise<void> {
+export async function updateBook(id: string, updates: Partial<Pick<Book, 'title' | 'backgroundColor' | 'textColor'>>): Promise<void> {
   const patchData: Partial<Book> = {
     ...updates,
     updatedAt: Date.now(),
@@ -85,7 +85,7 @@ export async function getAllChapters(): Promise<Chapter[]> {
   return all.filter(c => !c.isDeleted);
 }
 
-export async function updateChapter(id: string, updates: Partial<Pick<Chapter, 'title'>>): Promise<void> {
+export async function updateChapter(id: string, updates: Partial<Pick<Chapter, 'title' | 'backgroundColor' | 'textColor'>>): Promise<void> {
   const patchData: Partial<Chapter> = {
     ...updates,
     updatedAt: Date.now(),
