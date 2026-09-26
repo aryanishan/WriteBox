@@ -4,13 +4,15 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppState } from '@/frontend/contexts/AppStateProvider';
 import { useBooks, useChapters, useChapterNotes } from '@/frontend/hooks/useBooks';
 import { createBook, createChapter, deleteBook, deleteChapter, updateBook, updateChapter, getChapters } from '@/lib/db/books';
-import { createNote, deleteNote } from '@/lib/db/notes';
+import { createNote, deleteNote, updateNote } from '@/lib/db/notes';
 import { ChevronRight, ChevronDown, Plus, Book as BookIcon, Folder, FileText, Trash2, Pencil, Download, Loader2 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { Modal } from '@/frontend/components/ui/Modal';
 import { Button } from '@/frontend/components/ui/Button';
 import { db } from '@/lib/db/dexie';
 import { toast } from 'sonner';
+import { useContextMenu } from '@/frontend/hooks/useContextMenu';
+import { AppearanceMenu } from '@/frontend/components/ui/AppearanceMenu';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -196,6 +198,9 @@ function BookItem({ book, isExpanded, onToggle, onExpand }: { book: any; isExpan
   // ── Download state
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // ── Context menu
+  const menu = useContextMenu();
+
   useEffect(() => {
     if (isRenaming && renameInputRef.current) {
       renameInputRef.current.focus();
@@ -291,8 +296,13 @@ function BookItem({ book, isExpanded, onToggle, onExpand }: { book: any; isExpan
   return (
     <div className="flex flex-col">
       <div
-        className="flex items-center justify-between px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-hover)] cursor-pointer group"
+        className="flex items-center justify-between px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-hover)] cursor-pointer group transition-colors"
         onClick={isRenaming ? undefined : onToggle}
+        onContextMenu={menu.handleContextMenu}
+        style={{
+          backgroundColor: book.backgroundColor,
+          color: book.textColor
+        }}
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <span className="text-[var(--color-text-tertiary)] shrink-0">
@@ -314,7 +324,12 @@ function BookItem({ book, isExpanded, onToggle, onExpand }: { book: any; isExpan
               className="text-sm font-medium text-[var(--color-text-primary)] bg-[var(--color-bg-primary)] border border-[var(--color-accent)] rounded px-1 py-0 outline-none w-full min-w-0"
             />
           ) : (
-            <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">{book.title}</span>
+            <span 
+              className="text-sm font-medium truncate"
+              style={{ color: book.textColor || 'var(--color-text-primary)' }}
+            >
+              {book.title}
+            </span>
           )}
         </div>
         {!isRenaming && (
@@ -377,6 +392,15 @@ function BookItem({ book, isExpanded, onToggle, onExpand }: { book: any; isExpan
           <Button variant="danger" onClick={handleDeleteBook}>Delete</Button>
         </div>
       </Modal>
+
+      <AppearanceMenu
+        isOpen={menu.isOpen}
+        onClose={menu.closeMenu}
+        x={menu.position.x}
+        y={menu.position.y}
+        onBgColorSelect={(color) => updateBook(book.id, { backgroundColor: color })}
+        onTextColorSelect={(color) => updateBook(book.id, { textColor: color })}
+      />
     </div>
   );
 }
@@ -397,6 +421,9 @@ function ChapterItem({ chapter, isExpanded, onToggle, onExpand }: { chapter: any
 
   // ── Download state
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // ── Context Menu
+  const menu = useContextMenu();
 
   useEffect(() => {
     if (isRenaming && renameInputRef.current) {
@@ -486,8 +513,13 @@ function ChapterItem({ chapter, isExpanded, onToggle, onExpand }: { chapter: any
   return (
     <div className="flex flex-col">
       <div
-        className="flex items-center justify-between px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-hover)] cursor-pointer group"
+        className="flex items-center justify-between px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--color-bg-hover)] cursor-pointer group transition-colors"
         onClick={isRenaming ? undefined : onToggle}
+        onContextMenu={menu.handleContextMenu}
+        style={{
+          backgroundColor: chapter.backgroundColor,
+          color: chapter.textColor
+        }}
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <span className="text-[var(--color-text-tertiary)] shrink-0">
@@ -509,7 +541,12 @@ function ChapterItem({ chapter, isExpanded, onToggle, onExpand }: { chapter: any
               className="text-sm text-[var(--color-text-secondary)] bg-[var(--color-bg-primary)] border border-[var(--color-accent)] rounded px-1 py-0 outline-none w-full min-w-0"
             />
           ) : (
-            <span className="text-sm text-[var(--color-text-secondary)] truncate">{chapter.title}</span>
+            <span 
+              className="text-sm truncate"
+              style={{ color: chapter.textColor || 'var(--color-text-secondary)' }}
+            >
+              {chapter.title}
+            </span>
           )}
         </div>
         {!isRenaming && (
@@ -533,33 +570,7 @@ function ChapterItem({ chapter, isExpanded, onToggle, onExpand }: { chapter: any
       {isExpanded && (
         <div className="flex flex-col ml-4 border-l border-[var(--color-border)] pl-1 mt-0.5">
           {notes.map(note => (
-            <div
-              key={note.id}
-              onClick={() => {
-                setSelectedNoteId(note.id);
-                if (window.innerWidth < 768) setSidebarOpen(false);
-              }}
-              className={cn(
-                'flex items-center justify-between px-2 py-1.5 rounded-[var(--radius-md)] cursor-pointer group',
-                selectedNoteId === note.id
-                  ? 'bg-[var(--color-accent-light)] text-[var(--color-accent)]'
-                  : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]'
-              )}
-            >
-              <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                <FileText size={12} className="shrink-0" />
-                <span className="text-xs truncate">{note.title || 'Untitled'}</span>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowDeleteNoteModal(note.id);
-                }}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--color-error-bg)] rounded hover:text-[var(--color-error)] shrink-0"
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
+            <ChapterNoteItem key={note.id} note={note} setShowDeleteNoteModal={setShowDeleteNoteModal} />
           ))}
           {notes.length === 0 && (
             <div className="px-4 py-1 text-[10px] text-[var(--color-text-muted)] italic">No notes</div>
@@ -586,6 +597,71 @@ function ChapterItem({ chapter, isExpanded, onToggle, onExpand }: { chapter: any
           <Button variant="danger" onClick={handleDeleteNote}>Delete</Button>
         </div>
       </Modal>
+
+      <AppearanceMenu
+        isOpen={menu.isOpen}
+        onClose={menu.closeMenu}
+        x={menu.position.x}
+        y={menu.position.y}
+        onBgColorSelect={(color) => updateChapter(chapter.id, { backgroundColor: color })}
+        onTextColorSelect={(color) => updateChapter(chapter.id, { textColor: color })}
+      />
     </div>
+  );
+}
+
+// ── ChapterNoteItem ──────────────────────────────────────────────────
+
+function ChapterNoteItem({ note, setShowDeleteNoteModal }: { note: any, setShowDeleteNoteModal: (id: string) => void }) {
+  const { selectedNoteId, setSelectedNoteId, setSidebarOpen } = useAppState();
+  const menu = useContextMenu();
+
+  return (
+    <>
+      <div
+        onClick={() => {
+          setSelectedNoteId(note.id);
+          if (window.innerWidth < 768) setSidebarOpen(false);
+        }}
+        onContextMenu={menu.handleContextMenu}
+        style={{
+          backgroundColor: note.backgroundColor,
+          color: note.textColor
+        }}
+        className={cn(
+          'flex items-center justify-between px-2 py-1.5 rounded-[var(--radius-md)] cursor-pointer group transition-colors',
+          selectedNoteId === note.id && !note.backgroundColor
+            ? 'bg-[var(--color-accent-light)] text-[var(--color-accent)]'
+            : !note.backgroundColor ? 'hover:bg-[var(--color-bg-hover)]' : ''
+        )}
+      >
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <FileText size={12} className="shrink-0" />
+          <span 
+            className={cn("text-xs truncate", (!note.textColor && selectedNoteId !== note.id) && "text-[var(--color-text-tertiary)] group-hover:text-[var(--color-text-secondary)]")}
+            style={{ color: note.textColor }}
+          >
+            {note.title || 'Untitled'}
+          </span>
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowDeleteNoteModal(note.id);
+          }}
+          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--color-error-bg)] rounded hover:text-[var(--color-error)] shrink-0"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
+      <AppearanceMenu
+        isOpen={menu.isOpen}
+        onClose={menu.closeMenu}
+        x={menu.position.x}
+        y={menu.position.y}
+        onBgColorSelect={(color) => updateNote(note.id, { backgroundColor: color })}
+        onTextColorSelect={(color) => updateNote(note.id, { textColor: color })}
+      />
+    </>
   );
 }
