@@ -117,6 +117,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     const supabase = supabaseRef.current;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (
+      !supabaseUrl ||
+      !supabaseKey ||
+      supabaseUrl.includes('placeholder') ||
+      supabaseUrl.includes('your_supabase_project')
+    ) {
+      return {
+        error:
+          'Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file.',
+      };
+    }
+
+    // Verify connectivity to the Supabase project before redirecting
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const ping = await fetch(`${supabaseUrl}/auth/v1/settings`, {
+        headers: { apikey: supabaseKey },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!ping.ok && ping.status >= 500) {
+        return {
+          error:
+            'Supabase project is unreachable. If using a free plan, check if your project is paused in the Supabase dashboard.',
+        };
+      }
+    } catch {
+      return {
+        error:
+          'Cannot reach Supabase at ' +
+          supabaseUrl +
+          '. Check your internet connection or restore/unpause your project on supabase.com.',
+      };
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

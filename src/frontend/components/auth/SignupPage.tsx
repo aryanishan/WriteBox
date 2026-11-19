@@ -102,8 +102,10 @@ export function SignupPage() {
     setGoogleLoading(true);
     const { error } = await signInWithGoogle();
     if (error) {
-      toast.error(error);
+      toast.error(error, { duration: 6000 });
       setGoogleLoading(false);
+    } else {
+      setTimeout(() => setGoogleLoading(false), 5000);
     }
   };
 

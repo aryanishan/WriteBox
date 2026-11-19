@@ -41,10 +41,12 @@ export function LoginPage() {
     setGoogleLoading(true);
     const { error } = await signInWithGoogle();
     if (error) {
-      toast.error(error);
+      toast.error(error, { duration: 6000 });
       setGoogleLoading(false);
+    } else {
+      // In case the redirect is delayed or blocked by browser
+      setTimeout(() => setGoogleLoading(false), 5000);
     }
-    // OAuth redirect will handle the rest
   };
 
   return (
