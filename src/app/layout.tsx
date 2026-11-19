@@ -3,10 +3,10 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "WriteBox — Offline-First Notes",
+  title: "WriteBox — Creative Workspace",
   description:
-    "A modern, offline-first note-taking application with optional Google Drive synchronization. Write, organize, and sync your notes — no account required.",
-  keywords: ["notes", "note-taking", "offline", "google drive", "sync", "markdown"],
+    "A modern, offline-first creative workspace for notes and drawings. Write, draw, organize, and sync — no account required.",
+  keywords: ["notes", "drawing", "canvas", "offline", "google drive", "sync", "markdown", "sketch"],
 };
 
 export default function RootLayout({
