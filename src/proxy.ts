@@ -14,12 +14,43 @@ export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Skip middleware if Supabase is not configured
-  if (!supabaseUrl || !supabaseAnonKey) {
+  // Skip middleware if Supabase is not configured or uses placeholders
+  if (
+    !supabaseUrl ||
+    !supabaseAnonKey ||
+    supabaseUrl.includes('placeholder') ||
+    supabaseUrl.includes('your_supabase_project')
+  ) {
+    return supabaseResponse;
+  }
+
+  // Check if there are any auth cookies before doing network requests
+  const allCookies = request.cookies.getAll();
+  const hasAuthToken = allCookies.some(
+    (c) => c.name.startsWith('sb-') && c.name.includes('-auth-token')
+  );
+
+  // If there is no auth token cookie in the request, the user is unauthenticated.
+  // Skip getUser() to prevent unnecessary network latency and fetch errors.
+  if (!hasAuthToken) {
     return supabaseResponse;
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      fetch: async (input, init) => {
+        try {
+          return await fetch(input, init);
+        } catch {
+          // If Supabase host is unreachable or offline, return 400 so GoTrue
+          // handles it gracefully without retrying or logging AuthRetryableFetchError
+          return new Response(
+            JSON.stringify({ message: 'Auth server unreachable' }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+      },
+    },
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -40,7 +71,18 @@ export async function proxy(request: NextRequest) {
   try {
     const {
       data: { user },
+      error,
     } = await supabase.auth.getUser();
+
+    // If session is invalid or server is unreachable, clear stale auth cookies
+    if (error) {
+      allCookies.forEach((c) => {
+        if (c.name.startsWith('sb-') && c.name.includes('-auth-token')) {
+          supabaseResponse.cookies.delete(c.name);
+        }
+      });
+      return supabaseResponse;
+    }
 
     const pathname = request.nextUrl.pathname;
 
@@ -50,9 +92,8 @@ export async function proxy(request: NextRequest) {
       url.pathname = '/notes';
       return NextResponse.redirect(url);
     }
-  } catch (error) {
-    // If Supabase is unreachable or offline, allow offline navigation gracefully
-    console.warn('[proxy] Failed to refresh Supabase session:', error);
+  } catch {
+    // If Supabase fails, allow offline navigation gracefully
   }
 
   return supabaseResponse;

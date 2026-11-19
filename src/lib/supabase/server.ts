@@ -13,21 +13,32 @@ export async function createClient() {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
 
   return createServerClient(url, key, {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // setAll is called from a Server Component — ignore.
-            // The middleware will refresh the session later.
-          }
-        },
+    global: {
+      fetch: async (input, init) => {
+        try {
+          return await fetch(input, init);
+        } catch {
+          return new Response(
+            JSON.stringify({ message: 'Auth server unreachable' }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
       },
-    }
-  );
+    },
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        } catch {
+          // setAll is called from a Server Component — ignore.
+          // The middleware will refresh the session later.
+        }
+      },
+    },
+  });
 }

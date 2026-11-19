@@ -60,17 +60,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = supabaseRef.current;
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      const mapped = mapUser(s?.user ?? null);
-      setUser(mapped);
-      if (mapped) {
-        localStorage.setItem(LS_KEYS.AUTH_USER, JSON.stringify(mapped));
-      } else {
-        localStorage.removeItem(LS_KEYS.AUTH_USER);
-      }
-      setIsLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: s } }) => {
+        setSession(s);
+        const mapped = mapUser(s?.user ?? null);
+        setUser(mapped);
+        if (mapped) {
+          localStorage.setItem(LS_KEYS.AUTH_USER, JSON.stringify(mapped));
+        } else {
+          localStorage.removeItem(LS_KEYS.AUTH_USER);
+        }
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setIsLoading(false);
+      });
 
     // Subscribe to changes
     const {
