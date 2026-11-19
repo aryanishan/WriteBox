@@ -37,17 +37,22 @@ export async function proxy(request: NextRequest) {
   });
 
   // Refresh the session (important for keeping auth alive)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
+    const pathname = request.nextUrl.pathname;
 
-  // If user is logged in and visiting /auth/*, redirect to /notes
-  if (user && pathname.startsWith('/auth') && !pathname.startsWith('/auth/callback')) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/notes';
-    return NextResponse.redirect(url);
+    // If user is logged in and visiting /auth/*, redirect to /notes
+    if (user && pathname.startsWith('/auth') && !pathname.startsWith('/auth/callback')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/notes';
+      return NextResponse.redirect(url);
+    }
+  } catch (error) {
+    // If Supabase is unreachable or offline, allow offline navigation gracefully
+    console.warn('[proxy] Failed to refresh Supabase session:', error);
   }
 
   return supabaseResponse;
